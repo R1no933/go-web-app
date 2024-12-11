@@ -23,7 +23,7 @@ func main() {
 }
 
 func indexPage(w http.ResponseWriter, r *http.Request) {
-	io.WriteString(w, "Main page.")
+	io.WriteString(w, "Index")
 }
 
 func userPage(w http.ResponseWriter, r *http.Request) {
