@@ -2,7 +2,7 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
+	"net/http"
 )
 
 type User struct {
@@ -10,6 +10,36 @@ type User struct {
 	Name string `json:"username"`
 }
 
+func main() {
+	http.HandleFunc("/user", UserHandler)
+	err := http.ListenAndServe(":3030", nil)
+	if err != nil {
+		panic(err)
+	}
+}
+
+func WriteJSON(w http.ResponseWriter, status int, v any) error {
+	w.Header().Set("Content-Type", "application/json")
+	return json.NewEncoder(w).Encode(v)
+}
+
+func UserHandler(w http.ResponseWriter, r *http.Request) {
+	testUser := User{
+		Name: "Ivanov Ivan",
+		Id:   443490,
+	}
+	err := WriteJSON(w, http.StatusOK, testUser)
+
+	if err != nil {
+		WriteJSON(w, http.StatusInternalServerError, map[string]any{
+			"ok":    false,
+			"error": err.Error(),
+		})
+		return
+	}
+}
+
+/*
 var JSONData = `
 {
 	"id": 555,
@@ -41,6 +71,7 @@ type Item struct {
 	Number int    `json: "number"`
 }
 
+
 func main() {
 	//Data >>> JSON
 	user1 := User{
@@ -60,3 +91,4 @@ func main() {
 	}
 	fmt.Printf("%v", order1)
 }
+*/
