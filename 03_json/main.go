@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 )
 
@@ -11,7 +12,8 @@ type User struct {
 }
 
 func main() {
-	http.HandleFunc("/user", UserHandler)
+	http.HandleFunc("/user", UserHandlerReturnJSON)
+	http.HandleFunc("/user1", UserHandlerTakeJSON)
 	err := http.ListenAndServe(":3030", nil)
 	if err != nil {
 		panic(err)
@@ -23,7 +25,33 @@ func WriteJSON(w http.ResponseWriter, status int, v any) error {
 	return json.NewEncoder(w).Encode(v)
 }
 
-func UserHandler(w http.ResponseWriter, r *http.Request) {
+func UserHandlerTakeJSON(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		WriteJSON(w, http.StatusMethodNotAllowed, map[string]any{
+			"ok":    false,
+			"error": "Method not allowed",
+		})
+		return
+	}
+
+	var testUser User
+
+	err := json.NewDecoder(r.Body).Decode(&testUser)
+	if err != nil {
+		WriteJSON(w, http.StatusInternalServerError, map[string]any{
+			"ok":    false,
+			"error": err.Error(),
+		})
+		return
+	}
+
+	fmt.Printf("userTest %v", testUser)
+	WriteJSON(w, http.StatusOK, map[string]any{
+		"ok": true,
+	})
+}
+
+func UserHandlerReturnJSON(w http.ResponseWriter, r *http.Request) {
 	testUser := User{
 		Name: "Ivanov Ivan",
 		Id:   443490,
