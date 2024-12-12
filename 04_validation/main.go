@@ -4,20 +4,35 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+
+	validation "github.com/go-ozzo/ozzo-validation"
+	"github.com/go-ozzo/ozzo-validation/is"
 )
 
 type User struct {
-	Id   int    `json:"id"`
-	Name string `json:"username"`
+	Id    int    `json:"id" ozzo:"id"`
+	Name  string `json:"username" ozzo:"Имя"`
+	Email string `json:"email" ozzo:"Электронная почта"`
+	Phone string `json:"phone" ozzo:"Телефон"`
 }
 
 func main() {
+	validation.ErrorTag = "ozzo"
+
 	http.HandleFunc("/user", UserHandlerReturnJSON)
 	http.HandleFunc("/user1", UserHandlerTakeJSON)
 	err := http.ListenAndServe(":3030", nil)
 	if err != nil {
 		panic(err)
 	}
+}
+
+func (user User) Validate() error {
+	return validation.ValidateStruct(&user,
+		validation.Field(&user.Name, validation.Required, validation.Length(2, 30).Error("Неверная длинна имени")),
+		validation.Field(&user.Email, validation.Required, is.Email.Error("Неверный формат электронной почты")),
+		validation.Field(&user.Phone, is.E164.Error("Неверный формат номера")),
+	)
 }
 
 func WriteJSON(w http.ResponseWriter, status int, v any) error {
@@ -39,6 +54,15 @@ func UserHandlerTakeJSON(w http.ResponseWriter, r *http.Request) {
 	err := json.NewDecoder(r.Body).Decode(&testUser)
 	if err != nil {
 		WriteJSON(w, http.StatusInternalServerError, map[string]any{
+			"ok":    false,
+			"error": err.Error(),
+		})
+		return
+	}
+
+	err = testUser.Validate()
+	if err != nil {
+		WriteJSON(w, http.StatusBadRequest, map[string]any{
 			"ok":    false,
 			"error": err.Error(),
 		})
