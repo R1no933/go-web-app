@@ -1,7 +1,7 @@
 package main
 
 import (
-	"fmt"
+	"log"
 	"net/http"
 )
 
@@ -10,29 +10,39 @@ func main() {
 	mux.HandleFunc("/", HomeHandler)
 	mux.HandleFunc("/foo", FooHandler)
 
-	handler := MyMiddleWare(mux)
+	mdwrs := []func(http.Handler) http.Handler{
+		LoggingMiddleWare,
+		SecondMiddleWare,
+	}
 
-	err := http.ListenAndServe(":3030", handler)
+	h := http.Handler(mux)
+	for i := len(mdwrs) - 1; i >= 0; i-- {
+		h = mdwrs[i](h)
+	}
+
+	err := http.ListenAndServe(":3030", mux)
 	if err != nil {
 		panic(err)
 	}
-
 }
 
 func HomeHandler(w http.ResponseWriter, r *http.Request) {
-	fmt.Println("Home page.")
-	w.Write([]byte("Home page."))
+	w.Write([]byte("Home page.\n"))
 }
 
 func FooHandler(w http.ResponseWriter, r *http.Request) {
-	fmt.Println("Foo page.")
-	w.Write([]byte("Foo page."))
+	w.Write([]byte("Foo page.\n"))
 }
 
-func MyMiddleWare(h http.Handler) http.Handler {
+func LoggingMiddleWare(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		fmt.Println("before")
 		h.ServeHTTP(w, r)
-		fmt.Println("after")
+		log.Printf("%s\n", r.RequestURI)
+	})
+}
+
+func SecondMiddleWare(h http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		h.ServeHTTP(w, r)
 	})
 }
